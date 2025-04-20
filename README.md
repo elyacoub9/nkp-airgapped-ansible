@@ -15,8 +15,9 @@ main tasks:
 
 2. install ansible collections:
    ```bash
-   ansible-galaxy collection install nutanix.ncp #-->nutanix.ncp:2.1.1 was installed successfully
    ansible-galaxy collection install community.general # --> community.general:10.5.0 was installed successfully
+   ansible-galaxy collection install ansible.posix # --> ansible.posix:2.0.0 was installed successfully
+   ansible-galaxy collection install nutanix.ncp # --> nutanix.ncp:2.1.1 was installed successfully
    ```
 
 3. clone this repository:
