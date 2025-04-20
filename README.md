@@ -10,7 +10,7 @@ main tasks:
 
 1. update the system and install ansible
    ```bash
-   dnf update -y & dnf install ansible -y
+   dnf update -y & dnf install ansible-core -y
    ```
 
 2. install ansible collections:
