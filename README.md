@@ -1,5 +1,5 @@
 
-this repository contains ansible playbooks for deploying nkp in an airgapped env with a private and secure registry - harbor.
+deploy nkp airgapped with a private and secure registry (harbor) using ansible.
 
 main tasks:
   - create bootstrap VM 
