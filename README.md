@@ -41,7 +41,7 @@ main tasks:
    ```
 
 6. play
-   - add -v for more verbose output
+   - add -v for more detailed output
    ```bash
    ansible-playbook site.yaml 
    ```
