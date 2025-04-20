@@ -15,8 +15,8 @@ main tasks:
 
 2. install ansible collections:
    ```bash
-   ansible-galaxy collection install nutanix.ncp
-   ansible-galaxy collection install community.general
+   ansible-galaxy collection install nutanix.ncp #-->nutanix.ncp:2.1.1 was installed successfully
+   ansible-galaxy collection install community.general # --> community.general:10.5.0 was installed successfully
    ```
 
 3. clone this repository:
@@ -27,7 +27,7 @@ main tasks:
 
 4. edit the variables file with your env details:
    ```bash
-   vim vars/all.yaml
+   vim vars/all.yaml  #yum install vim -y 
    ```
 
 5. update hosts.ini and generate ssh keys:
