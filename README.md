@@ -10,8 +10,7 @@ main tasks:
 
 1. update the system and install ansible
    ```bash
-   yum update -y
-   dnf install ansible -y
+   dnf update -y & dnf install ansible -y
    ```
 
 2. install ansible collections:
@@ -41,8 +40,8 @@ main tasks:
    ```
 
 6. play
-  - add -v for more verbose output
-  ```bash
-  ansible-playbook site.yaml 
-  ```
+   - add -v for more verbose output
+   ```bash
+   ansible-playbook site.yaml 
+   ```
 
