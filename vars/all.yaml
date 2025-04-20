@@ -1,0 +1,21 @@
+BOOTSTRAP_VM_IMAGE: ""                # rocky linux image (qcow2) for bootstrap vm (upload to pc) "https://dl.rockylinux.org/pub/rocky/9.5/images/x86_64/"
+HARBOR_IP: ""                         # static ip for harbor vm
+HARBOR_USER: "svc-nkp"                # user will be created in Harbor and will be used for push/pull nkp images
+HARBOR_PASSWORD: "Tobechanged1"       # must be 8-128 chars with upper/lower/numbers
+
+NUTANIX_USER: "svc-nkp"               # create a dedicated user for nkp in nutanix pc (you)
+NUTANIX_PASSWORD: "Tobechanged1"      # its password
+PE_CLUSTER_NAME: ""                   # pe cluster name
+PC_ENDPOINT: ""                       # prism central ip
+SUBNET: ""                            # subnet with IPAM enabled and available ip addresses
+
+NKP_VMS_IMAGE: ""                     # nkp nodes os Image from portal (uploaded to prism central); (nkp-rocky-9.5-release-1.31.4-20250214003015.qcow2)
+NKP_AIRGAPPED_BUNDER_URL: ""          # nkp airgapped bundel lien from portal  
+#NKP_AIRGAPPED_BUNDLE_PATH_PATH: "/root/nkp-air-gapped-bundle_v2.14.0_linux_amd64.tar.gz"
+
+MGMT_CLUSTER_NAME: ""                 # nkp management cluster name
+MGMT_CP_ENDPOINT: ""                  # management cluster control plane ip 
+STORAGE_CONTAINER: ""                 # storage container in pc
+MGMT_LB_IP_RANGE: ""                  # metallb ip range (10.38.106.41-10.38.106.45)
+
+

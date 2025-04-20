@@ -1,0 +1,59 @@
+- name: deploy docker with prv registry (harbor)
+  hosts: bootstrap
+  vars_files:
+    - ../vars/all.yaml
+  tasks:
+    
+    - name: add docker repo
+      shell: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: install docker
+      dnf:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: enable and start docker
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: add harbor insecure registry in daemon.json 
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "insecure-registries": ["{{ HARBOR_IP }}"]
+          }
+
+    - name: create docker certs dir
+      file:
+        path: "/etc/docker/certs.d/{{ HARBOR_IP }}"
+        state: directory
+
+    - name: copy registry certs 
+      copy:
+        src: "{{ item }}"
+        dest: "/etc/docker/certs.d/{{ HARBOR_IP }}/"
+        remote_src: yes
+      loop:
+        - "/root/nkp/reg-certs/{{ HARBOR_IP }}.key"
+        - "/root/nkp/reg-certs/{{ HARBOR_IP }}.cert"
+        - "/root/nkp/reg-certs/ca.crt"
+
+    - name: restart docker service
+      systemd:
+        name: docker
+        state: restarted
+
+    - name: verify docker status
+      command: systemctl status docker
+      register: docker_status
+
+    - name: display docker status
+      debug:
+        var: docker_status.stdout_lines

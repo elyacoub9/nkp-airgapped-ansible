@@ -1,0 +1,21 @@
+---
+
+- name: Bootstrap VM preparation
+  hosts: bootstrap 
+
+  tasks:
+    - name: Update Rocky
+      dnf:
+        name: '*'
+        state: latest
+
+    - name: install basic tools 
+      dnf:
+        name:
+          - nc
+          - tmux
+          - curl
+          - wget
+          - vim
+          - bash-completion
+        state: present

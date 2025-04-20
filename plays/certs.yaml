@@ -1,0 +1,86 @@
+- name: generate certs for harbor
+  hosts: bootstrap
+  vars_files:
+    - ../vars/all.yaml
+  tasks:
+    #    - name: set env variables in .bashrc
+    #      shell: |
+    #        grep -q "export HARBOR_IP={{ HARBOR_IP }}" /root/.bashrc ||
+    #        /usr/bin/echo 'export HARBOR_IP={{ HARBOR_IP }}' >> /root/.bashrc
+
+    - name: create cert dir
+      file:
+        path: "/root/nkp/reg-certs/"
+        state: directory
+
+    - name: generate ca key and cert
+      shell: |
+        openssl genrsa -out /root/nkp/reg-certs/ca.key 4096
+        openssl req -x509 -new -nodes -sha512 -days 3650 \
+        -subj "/C=MA/ST=Casa/L=Casa/O=nuta/OU=CC/CN={{ HARBOR_IP }}" \
+        -key /root/nkp/reg-certs/ca.key \
+        -out /root/nkp/reg-certs/ca.crt
+      args:
+        chdir: "/root/nkp/reg-certs/"
+
+
+    - name: generate domain prv key
+      shell: openssl genrsa -out /root/nkp/reg-certs/{{ HARBOR_IP }}.key 4096
+      args:
+        chdir: "/root/nkp/reg-certs/"
+        creates: "/root/nkp/reg-certs/{{ HARBOR_IP }}.key"
+
+    - name: generate csr
+      shell: |
+        openssl req -sha512 -new \
+        -subj "/C=MA/ST=Casa/L=Casa/O=nuta/OU=CC/CN={{ HARBOR_IP }}" \
+        -key /root/nkp/reg-certs/{{ HARBOR_IP }}.key \
+        -out /root/nkp/reg-certs/{{ HARBOR_IP }}.csr
+      args:
+        chdir: "/root/nkp/reg-certs/"
+        creates: "/root/nkp/reg-certs/{{ HARBOR_IP }}.csr"
+
+    - name: create v3.ext file
+      copy:
+        dest: "/root/nkp/reg-certs/v3.ext"
+        content: |
+          authorityKeyIdentifier=keyid,issuer
+          basicConstraints=CA:FALSE
+          keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+          extendedKeyUsage = serverAuth
+          subjectAltName = @alt_names
+
+          [alt_names]
+          IP.1 = "{{ HARBOR_IP }}"
+
+    - name: generate domain cert 
+      shell: |
+        openssl x509 -req -sha512 -days 3650 \
+        -extfile /root/nkp/reg-certs/v3.ext \
+        -CA /root/nkp/reg-certs/ca.crt -CAkey /root/nkp/reg-certs/ca.key -CAcreateserial \
+        -in /root/nkp/reg-certs/{{ HARBOR_IP }}.csr \
+        -out /root/nkp/reg-certs/{{ HARBOR_IP }}.crt
+      args:
+        chdir: "/root/nkp/reg-certs/"
+        creates: "/root/nkp/reg-certs/{{ HARBOR_IP }}.crt"
+
+    - name: convert domain crt to cert format (for docker)
+      shell: openssl x509 -inform PEM -in /root/nkp/reg-certs/{{ HARBOR_IP }}.crt -out /root/nkp/reg-certs/{{ HARBOR_IP }}.cert
+      args:
+        chdir: "/root/nkp/reg-certs/"
+        creates: "/root/nkp/reg-certs/{{ HARBOR_IP }}.cert"
+
+    - name: generate SSH key
+      shell: ssh-keygen -o -f /root/.ssh/id_rsa -N "" -q
+      args:
+        creates: "/root/.ssh/id_rsa"
+    
+    - name: verify certs creation
+      shell: ls "/root/nkp/reg-certs/" 
+      register: list_certs
+
+    - name: certificate generation completed successfully
+      debug:
+        msg:
+          - Files created in --> "/root/nkp/reg-certs/"
+          - "{{ list_certs }}"

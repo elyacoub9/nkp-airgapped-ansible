@@ -1,0 +1,63 @@
+- name: bootstrap vm create
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/nutanix.ncp.ntnx:
+      nutanix_host: "{{ PC_ENDPOINT }}"
+      nutanix_username: "{{ NUTANIX_USER }}"
+      nutanix_password: "{{ NUTANIX_PASSWORD }}"
+      validate_certs: false
+  vars_files:
+    - ../vars/all.yaml
+  vars:
+    - ctr_pub_key: "{{ lookup('file','~/.ssh/id_rsa.pub') }}"
+  tasks:
+    - name: Create Cloud-init Script file
+      ansible.builtin.copy:
+        dest: ".cloud_init.yml"
+        content: |
+          #cloud-config
+          ssh_pwauth: True
+          disable_root: false
+          chpasswd:
+            list: |
+              root:root
+            expire: False
+          ssh_authorized_keys:
+            - "{{ ctr_pub_key }}"
+          runcmd:
+            - sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+            - sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+            - systemctl restart sshd
+
+    - name: VM with Cluster, Network, Universal time zone, one Disk
+      nutanix.ncp.ntnx_vms:
+        state: present
+        name: "nkp-boostrapp"
+        cluster:
+          name: "{{ PE_CLUSTER_NAME }}"
+        networks:
+          - is_connected: True
+            private_ip: "{{ HARBOR_IP }}"
+            subnet:
+              name: "{{ SUBNET }}"
+        disks:
+          - type: "DISK"
+            size_gb: 150
+            bus: "SCSI"
+            clone_image:
+              name: "{{ BOOTSTRAP_VM_IMAGE }}"
+        vcpus: 4
+        cores_per_vcpu: 1
+        memory_gb: 8
+        guest_customization:
+          type: "cloud_init"
+          script_path: "./.cloud_init.yml"
+          is_overridable: true
+
+    - name: wait for bootstrap vm to become ready 
+      wait_for:
+        port: 22
+        timeout: 300
+        host: "{{ HARBOR_IP }}"
+        delay: 10

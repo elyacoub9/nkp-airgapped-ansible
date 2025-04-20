@@ -1,0 +1,109 @@
+- name: deploy nkp management cluster
+  hosts: bootstrap
+  vars_files:
+    - ../vars/all.yaml
+
+
+  tasks:
+    
+    - name: download nkp air-gapped bundle
+      get_url:
+        url: "{{ NKP_AIRGAPPED_BUNDER_URL }}"
+        dest: "/root/nkp-air-gapped-bundle_v2.14.0_linux_amd64.tar.gz"
+      register: download_result
+      until: download_result is succeeded
+      retries: 3
+      delay: 10
+    
+    #    - name: Copy nkp air-gapped bundle to remote
+    #      shell: rsync -chavz {{ NKP_AIRGAPPED_BUNDLE_PATH }}  {{ HARBOR_IP }}:/root/
+
+    - name: extract nkp bundle
+      unarchive:
+        src: "/root/nkp-air-gapped-bundle_v2.14.0_linux_amd64.tar.gz"
+        dest: "/root/nkp"
+        remote_src: yes
+        creates: "/root/nkp/nkp-v2.14.0"
+
+    - name: copy nkp cli and kubectl to /usr/local/bin/
+      copy:
+        src: "/root/nkp/nkp-v2.14.0/{{ item.src }}"
+        dest: "/usr/local/bin/{{ item.dest }}"
+        mode: '0755'
+        remote_src: yes
+      loop:
+        - { src: 'cli/nkp', dest: 'nkp' }
+        - { src: 'kubectl', dest: 'kubectl' } 
+    
+    - name: Set environment variables
+      shell: |
+        /usr/bin/echo "export NUTANIX_USER={{ NUTANIX_USER }}" >> /root/.bashrc
+        /usr/bin/echo "export NUTANIX_PASSWORD={{ NUTANIX_PASSWORD }}" >> /root/.bashrc
+        source /root/.bashrc    
+        #    - name: source environment immediately
+        #      shell: source /root/.bashrc
+        #      args:
+        #        executable: /bin/bash
+
+    - name: docker login to harbor registry
+      shell: docker login https://{{ HARBOR_IP }}/nkp -u {{ HARBOR_USER }} -p {{ HARBOR_PASSWORD }}
+
+    - name: push image bundles to registry
+      shell: |
+        /usr/local/bin/nkp push bundle --bundle {{ item }} --to-registry=https://{{ HARBOR_IP }}/nkp --to-registry-ca-cert-file /root/nkp/reg-certs/ca.crt --to-registry-username {{ HARBOR_USER }} --to-registry-password={{ HARBOR_PASSWORD }}
+      args:
+        chdir: "/root/nkp/nkp-v2.14.0/container-images"
+      loop:
+        - "kommander-image-bundle-v2.14.0.tar"
+        - "konvoy-image-bundle-v2.14.0.tar"
+        - "nkp-catalog-applications-image-bundle-v2.14.0.tar"
+
+    - name: load bootstrap images
+      shell: docker load -i {{ item }}
+      args:
+        chdir: "/root/nkp/nkp-v2.14.0"
+      loop:
+        - "konvoy-bootstrap-image-v2.14.0.tar"
+        - "nkp-image-builder-image-v0.22.3.tar"
+
+    - name: cluster creation
+      shell: |
+        /usr/local/bin/nkp create cluster nutanix \
+        --cluster-name={{ MGMT_CLUSTER_NAME }} \
+        --control-plane-prism-element-cluster={{ PE_CLUSTER_NAME }} \
+        --control-plane-subnets={{ SUBNET }} \
+        --control-plane-endpoint-ip={{ MGMT_CP_ENDPOINT }} \
+        --control-plane-vm-image={{ NKP_VMS_IMAGE }} \
+        --control-plane-memory=16 \
+        --control-plane-vcpus=8 \
+        --control-plane-replicas=3 \
+        --worker-prism-element-cluster={{ PE_CLUSTER_NAME }} \
+        --worker-subnets={{ SUBNET }} \
+        --worker-vm-image={{ NKP_VMS_IMAGE }} \
+        --worker-memory=16 \
+        --worker-replicas=3 \
+        --csi-storage-container={{ STORAGE_CONTAINER }} \
+        --kubernetes-service-load-balancer-ip-range={{ MGMT_LB_IP_RANGE }} \
+        --endpoint="https://{{ PC_ENDPOINT }}:9440" \
+        --insecure=true \
+        --ssh-public-key-file=/root/.ssh/id_rsa.pub \
+        --registry-url=https://{{ HARBOR_IP }} \
+        --registry-cacert=/root/nkp/reg-certs/ca.crt \
+        --registry-mirror-url=https://{{ HARBOR_IP }}/nkp \
+        --registry-mirror-cacert=/root/nkp/reg-certs/ca.crt \
+        --registry-mirror-password={{ HARBOR_PASSWORD }} \
+        --registry-mirror-username={{ HARBOR_USER }} \
+        --airgapped \
+        --self-managed
+      args:
+        chdir: "/root/nkp/nkp-v2.14.0"
+    
+    - shell: /usr/local/bin/nkp get dashboard --kubeconfig /root/nkp/nkp-v2.14.0/{{ MGMT_CLUSTER_NAME }}.conf
+      register: nkp_dashboard
+      no_log: yes
+
+
+    - name: desplay nkp dashboard
+      debug:
+        var: nkp_dashboard.stdout_lines
+

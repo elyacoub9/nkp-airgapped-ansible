@@ -1,0 +1,112 @@
+- name: install and configure harbor
+  hosts: bootstrap
+  vars_files:
+    - ../vars/all.yaml
+  
+  tasks:
+    - name: Ensure Harbor directory exists
+      file:
+        path: "/root/nkp"
+        state: directory
+
+    - name: download harbor binaries
+      #      shell: |
+      #        curl -Lo /root/nkp/harbor-offline-installer-v2.12.2.tgz \
+      #        https://github.com/goharbor/harbor/releases/download/v2.12.2/harbor-offline-installer-v2.12.2.tgz
+      #      args:
+      #        chdir: "/root/nkp"
+      #        creates: "/root/nkp/harbor-offline-installer-v2.12.2.tgz"
+      #
+      get_url:
+        url: "https://github.com/goharbor/harbor/releases/download/v2.12.2/harbor-offline-installer-v2.12.2.tgz"
+        dest: "/root/harbor-offline-installer-v2.12.2.tgz"
+      register: download_result
+      until: download_result is succeeded
+      retries: 3
+      delay: 10
+
+    - name: extract harbor files
+      unarchive:
+        src: "/root/harbor-offline-installer-v2.12.2.tgz"
+        dest: "/root/nkp"
+        remote_src: yes
+        creates: "/root/nkp/harbor"
+
+    - name: create certs dir for Harbor
+      file:
+        path: "/data/cert"
+        state: directory
+
+    - name: copy certs to /data/cert
+      copy:
+        src: "{{ item }}"
+        dest: "/data/cert/"
+        remote_src: yes  
+      loop:
+        - "/root/nkp/reg-certs/{{ HARBOR_IP }}.crt"
+        - "/root/nkp/reg-certs/{{ HARBOR_IP }}.key"
+
+    - name: load harbor docker images
+      shell: docker load -i /root/nkp/harbor/harbor.v2.12.2.tar.gz
+      args:
+        chdir: "/root/nkp/harbor"
+
+    - name: copy harbor.yml.tmpl to harbor.yml
+      shell: cp harbor.yml.tmpl harbor.yml
+      args:
+        chdir: "/root/nkp/harbor"  
+
+    - name: configure harbor.yml to use the correct hostname and certs dir
+      shell: |
+        sed -i \
+        -e "s|reg\.mydomain\.com|{{ HARBOR_IP }}|g" \
+        -e "s|/your/certificate/path|/data/cert/{{ HARBOR_IP }}.crt|g" \
+        -e "s|/your/private/key/path|/data/cert/{{ HARBOR_IP }}.key|g" \
+        harbor.yml
+      args:
+        chdir: "/root/nkp/harbor"
+
+    - name: prepare harbor 
+      shell: ./prepare
+      args:
+        chdir: "/root/nkp/harbor"
+
+    - name: install harbor
+      shell: ./install.sh --with-trivy
+      args:
+        chdir: "/root/nkp/harbor"
+
+    - name: verify harbor is running
+      command: docker compose ps
+      args:
+        chdir: "/root/nkp/harbor"
+      register: harbor_status
+
+    - name: display harbor status
+      debug:
+        var: harbor_status.stdout_lines
+
+          #    - name: pause for 20 seconds
+          #      pause:
+          #        seconds: 20 
+    - name: wait for harbor svc to become ready
+      wait_for:
+        port: 443
+        timeout: 300
+        host: "{{ HARBOR_IP }}"
+        delay: 10
+
+    - name: create svc-nkp user in harbor
+      shell: |
+        curl --cacert /root/nkp/reg-certs/ca.crt -u admin:Harbor12345 \
+        -X POST "https://{{ HARBOR_IP }}/api/v2.0/users" \
+        -H "Content-Type: application/json" \
+        -d '{"realname": "nkp user","password": "{{ HARBOR_PASSWORD }}","username": "{{ HARBOR_USER }}", "email": "svc-nkp@ntnx.local"}'
+          
+    - name: create nkp project in harbor
+      shell: |
+        curl --cacert /root/nkp/reg-certs/ca.crt -u {{ HARBOR_USER }}:{{ HARBOR_PASSWORD }} \
+        -X POST "https://{{ HARBOR_IP }}/api/v2.0/projects" \
+        -H "Content-Type: application/json" \
+        -d '{"project_name": "nkp", "metadata": {"public": "false", "auto_scan": "true"}}' \
+

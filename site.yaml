@@ -1,0 +1,18 @@
+
+- name: import plays/deploy_bootstrap_vm.yaml
+  ansible.builtin.import_playbook: plays/deploy_bootstrap_vm.yaml
+
+- name: import plays/prep_bootstrap_vm.yaml
+  ansible.builtin.import_playbook: plays/prep_bootstrap_vm.yaml
+
+- name: import plays/certs.yaml
+  ansible.builtin.import_playbook: plays/certs.yaml
+
+- name: import plays/docker.yaml
+  ansible.builtin.import_playbook: plays/docker.yaml
+
+- name: import plays/harbor.yaml
+  ansible.builtin.import_playbook: plays/harbor.yaml
+    
+- name: import plays/nkp-deploy.yaml
+  ansible.builtin.import_playbook: plays/nkp-deploy.yaml
