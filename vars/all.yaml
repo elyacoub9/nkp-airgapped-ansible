@@ -1,10 +1,10 @@
 BOOTSTRAP_VM_IMAGE: ""                # rocky linux image (qcow2) for bootstrap vm (upload to pc) "https://dl.rockylinux.org/pub/rocky/9.5/images/x86_64/"
 HARBOR_IP: ""                         # static ip for harbor vm
-HARBOR_USER: "svc-nkp"                # user will be created in Harbor and will be used for push/pull nkp images
-HARBOR_PASSWORD: "Tobechanged1"       # must be 8-128 chars with upper/lower/numbers
+HARBOR_USER: ""                       # user will be created in Harbor and will be used for push/pull nkp images
+HARBOR_PASSWORD: ""                   # must be 8-128 chars with upper/lower/numbers
 
-NUTANIX_USER: "svc-nkp"               # create a dedicated user for nkp in nutanix pc (you)
-NUTANIX_PASSWORD: "Tobechanged1"      # its password
+NUTANIX_USER: ""                      # create a dedicated user for nkp in nutanix pc (you)
+NUTANIX_PASSWORD: ""                  # its password
 PE_CLUSTER_NAME: ""                   # pe cluster name
 PC_ENDPOINT: ""                       # prism central ip
 SUBNET: ""                            # subnet with IPAM enabled and available ip addresses

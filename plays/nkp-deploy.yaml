@@ -2,7 +2,7 @@
   hosts: bootstrap
   vars_files:
     - ../vars/all.yaml
-
+    - ../vars/custom_resources.yaml
 
   tasks:
     
@@ -25,17 +25,21 @@
         remote_src: yes
         creates: "/root/nkp/nkp-v2.14.0"
 
-    - name: copy nkp cli and kubectl to /usr/local/bin/
+    - name: copy nkp cli and to /usr/local/bin/
       copy:
-        src: "/root/nkp/nkp-v2.14.0/{{ item.src }}"
-        dest: "/usr/local/bin/{{ item.dest }}"
+        src: "/root/nkp/nkp-v2.14.0/cli/nkp"
+        dest: "/usr/local/bin/nkp"
         mode: '0755'
         remote_src: yes
-      loop:
-        - { src: 'cli/nkp', dest: 'nkp' }
-        - { src: 'kubectl', dest: 'kubectl' } 
-    
-    - name: Set environment variables
+
+    - name: copy kubectl to /usr/local/bin/
+      copy:
+        src: "/root/nkp/nkp-v2.14.0/kubectl"
+        dest: "/usr/local/bin/kubectl"
+        mode: '0755'
+        remote_src: yes
+
+    - name: set environment variables
       shell: |
         /usr/bin/echo "export NUTANIX_USER={{ NUTANIX_USER }}" >> /root/.bashrc
         /usr/bin/echo "export NUTANIX_PASSWORD={{ NUTANIX_PASSWORD }}" >> /root/.bashrc
@@ -50,7 +54,7 @@
 
     - name: push image bundles to registry
       shell: |
-        /usr/local/bin/nkp push bundle --bundle {{ item }} --to-registry=https://{{ HARBOR_IP }}/nkp --to-registry-ca-cert-file /root/nkp/reg-certs/ca.crt --to-registry-username {{ HARBOR_USER }} --to-registry-password={{ HARBOR_PASSWORD }}
+        /usr/local/bin/nkp push bundle --bundle {{ item }} --to-registry=https://{{ HARBOR_IP }}/nkp --to-registry-ca-cert-file=/root/nkp/reg-certs/ca.crt --to-registry-username={{ HARBOR_USER }} --to-registry-password={{ HARBOR_PASSWORD }}
       args:
         chdir: "/root/nkp/nkp-v2.14.0/container-images"
       loop:
@@ -66,7 +70,21 @@
         - "konvoy-bootstrap-image-v2.14.0.tar"
         - "nkp-image-builder-image-v0.22.3.tar"
 
-    - name: cluster creation
+          #    - name: set custom conf
+          #      set_fact:
+          #        CONTROL_PLANE_REPLICAS: "3"
+          #        CONTROL_PLANE_DISK_SIZE: "80"
+          #        CONTROL_PLANE_MEMORY: "16"
+          #        CONTROL_PLANE_VCPUS: "4"
+          #        WORKER_REPLICAS: "4"
+          #        WORKER_DISK_SIZE: "80"
+          #        WORKER_MEMORY: "32"
+          #        WORKER_VCPUS: "8"
+          #        KUBERNETES_POD_NETWORK_CIDR: "192.168.0.0/16"
+          #        KUBERNETES_SERVICE_CIDR: "10.96.0.0/12"
+          #      when: CHANGE == "false"
+
+    - name: create management cluster with default conf 
       shell: |
         /usr/local/bin/nkp create cluster nutanix \
         --cluster-name={{ MGMT_CLUSTER_NAME }} \
@@ -74,14 +92,9 @@
         --control-plane-subnets={{ SUBNET }} \
         --control-plane-endpoint-ip={{ MGMT_CP_ENDPOINT }} \
         --control-plane-vm-image={{ NKP_VMS_IMAGE }} \
-        --control-plane-memory=16 \
-        --control-plane-vcpus=8 \
-        --control-plane-replicas=3 \
         --worker-prism-element-cluster={{ PE_CLUSTER_NAME }} \
         --worker-subnets={{ SUBNET }} \
         --worker-vm-image={{ NKP_VMS_IMAGE }} \
-        --worker-memory=16 \
-        --worker-replicas=3 \
         --csi-storage-container={{ STORAGE_CONTAINER }} \
         --kubernetes-service-load-balancer-ip-range={{ MGMT_LB_IP_RANGE }} \
         --endpoint="https://{{ PC_ENDPOINT }}:9440" \
@@ -97,7 +110,47 @@
         --self-managed
       args:
         chdir: "/root/nkp/nkp-v2.14.0"
-    
+      when: CHANGE == "false"
+        
+    - name: create management cluster with custom conf
+      shell: |
+        /usr/local/bin/nkp create cluster nutanix \
+        --cluster-name={{ MGMT_CLUSTER_NAME }} \
+        --control-plane-prism-element-cluster={{ PE_CLUSTER_NAME }} \
+        --control-plane-subnets={{ SUBNET }} \
+        --control-plane-endpoint-ip={{ MGMT_CP_ENDPOINT }} \
+        --control-plane-vm-image={{ NKP_VMS_IMAGE }} \
+        --control-plane-disk-size={{ CONTROL_PLANE_DISK_SIZE }} \
+        --control-plane-memory={{ CONTROL_PLANE_MEMORY }} \
+        --control-plane-vcpus={{ CONTROL_PLANE_VCPUS }} \
+        --control-plane-replicas={{ CONTROL_PLANE_REPLICAS }} \
+        --worker-prism-element-cluster={{ PE_CLUSTER_NAME }} \
+        --worker-subnets={{ SUBNET }} \
+        --worker-vm-image={{ NKP_VMS_IMAGE }} \
+        --worker-disk-size={{ WORKER_DISK_SIZE }} \
+        --worker-memory={{ WORKER_MEMORY }} \
+        --worker-vcpus={{ WORKER_VCPUS }} \
+        --worker-replicas={{ WORKER_REPLICAS }} \
+        --csi-storage-container={{ STORAGE_CONTAINER }} \
+        --kubernetes-service-load-balancer-ip-range={{ MGMT_LB_IP_RANGE }} \
+        --kubernetes-pod-network-cidr={{ KUBERNETES_POD_NETWORK_CIDR }} \
+        --kubernetes-service-cidr={{ KUBERNETES_SERVICE_CIDR }} \
+        --endpoint="https://{{ PC_ENDPOINT }}:9440" \
+        --insecure=true \
+        --ssh-public-key-file=/root/.ssh/id_rsa.pub \
+        --registry-url=https://{{ HARBOR_IP }} \
+        --registry-cacert=/root/nkp/reg-certs/ca.crt \
+        --registry-mirror-url=https://{{ HARBOR_IP }}/nkp \
+        --registry-mirror-cacert=/root/nkp/reg-certs/ca.crt \
+        --registry-mirror-password={{ HARBOR_PASSWORD }} \
+        --registry-mirror-username={{ HARBOR_USER }} \
+        --airgapped \
+        --self-managed
+      args:
+        chdir: "/root/nkp/nkp-v2.14.0"    
+      when: CHANGE == "true"
+
+
     - shell: /usr/local/bin/nkp get dashboard --kubeconfig /root/nkp/nkp-v2.14.0/{{ MGMT_CLUSTER_NAME }}.conf
       register: nkp_dashboard
       no_log: yes

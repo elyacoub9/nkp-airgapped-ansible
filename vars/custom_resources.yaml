@@ -1,0 +1,17 @@
+# take a look at ntnx nkp official documentation before making any change !!
+# https://portal.nutanix.com/page/documents/details?targetId=Nutanix-Kubernetes-Platform-v2_14:top-resource-req-general-c.html
+
+CHANGE: "false"                             # set to - "true" -  if you want to change the default resources config
+
+CONTROL_PLANE_REPLICAS: ""                  # default is 3
+CONTROL_PLANE_DISK_SIZE: ""                 # default is 80 
+CONTROL_PLANE_MEMORY: ""                    # default is 16
+CONTROL_PLANE_VCPUS: ""                     # default is 4
+
+WORKER_REPLICAS: ""                         # default is 4
+WORKER_DISK_SIZE: ""                        # default is 80
+WORKER_MEMORY: ""                           # default is 32
+WORKER_VCPUS: ""                            # default is 8
+
+KUBERNETES_POD_NETWORK_CIDR: ""             # default is 192.168.0.0/16
+KUBERNETES_SERVICE_CIDR: ""                 # default is 10.96.0.0/12
