@@ -27,11 +27,17 @@ main tasks:
    ```
 
 4. edit the variables file with your env details:
+   a. fill the params in this file vars/all.yaml:
    ```bash
    vim vars/all.yaml  #yum install vim -y 
    ```
+   b. customize your management cluster resources (optional):
+   ```bash
+   vim vars/custom_resources.yaml  
+   ```
+  if you don’t make any changes to the file, the cluster will use the default (recommended) config.
 
-5. update hosts.ini and generate ssh keys:
+6. update hosts.ini and generate ssh keys:
    ```bash
    HARBOR_IP=$(grep 'HARBOR_IP:' vars/all.yaml | awk '{print $2}' | tr -d '"')
    echo -e "[bootstrap]\n$HARBOR_IP" > inventory/hosts.ini
@@ -40,9 +46,10 @@ main tasks:
    ssh-keygen -o -f /root/.ssh/id_rsa -N "" -q
    ```
 
-6. play
+7. play
    - add -v for more detailed output
    ```bash
    ansible-playbook site.yaml 
    ```
 
+**the default login for the bootstrap vm is root:root, which you should change.**
