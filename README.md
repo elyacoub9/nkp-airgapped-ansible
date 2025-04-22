@@ -13,7 +13,7 @@ main tasks:
    dnf update -y 
    ```
 
-2. update the system 
+2. install ansible  
    ```bash
    dnf install ansible-core -y 
    ```
