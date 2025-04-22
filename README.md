@@ -27,6 +27,7 @@ main tasks:
    ```
 
 4. edit the variables file with your env details:
+
    a. fill the params in this file vars/all.yaml:
    ```bash
    vim vars/all.yaml  #yum install vim -y 
