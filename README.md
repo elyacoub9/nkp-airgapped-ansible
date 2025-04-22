@@ -8,25 +8,30 @@ main tasks:
   - deploy and configure harbor
   - deploy nkp
 
-1. update the system and install ansible
+1. update the system 
    ```bash
-   dnf update -y & dnf install ansible-core -y
+   dnf update -y 
    ```
 
-2. install ansible collections:
+2. update the system 
+   ```bash
+   dnf install ansible-core -y 
+   ```
+
+3. install ansible collections:
    ```bash
    ansible-galaxy collection install community.general # --> community.general:10.5.0 was installed successfully
    ansible-galaxy collection install ansible.posix # --> ansible.posix:2.0.0 was installed successfully
    ansible-galaxy collection install nutanix.ncp # --> nutanix.ncp:2.1.1 was installed successfully
    ```
 
-3. clone this repository:
+4. clone this repository:
    ```bash
    git clone https://github.com/elyacoub9/nkp-airgapped-ansible.git
    cd nkp-airgapped-ansible
    ```
 
-4. edit the variables file with your env details:
+5. edit the variables file with your env details:
 
    a. fill the params in this file vars/all.yaml:
    ```bash
